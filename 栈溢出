@@ -22,7 +22,7 @@ eip： 用来存储即将执行的 程序指令 的地址，cpu 依照 eip 的�
 0x12 创建
 变化的核心任务是将调用函数（caller）的状态保存起来（返回地址和基地址依次压栈），同时创建被调用函数（callee）的状态。
 
-首先将caller的基地址存入 ebp ，然后将callee参数依次压栈（caller的局部变量）
+首先将caller的基地址存入 ebp ，然后将callee 参数 依次压栈（caller的局部变量）
 
 再将caller进行调用之后的下一条指令地址作为 返回地址 压入栈内。这样caller的 eip 的信息得以保存
 
