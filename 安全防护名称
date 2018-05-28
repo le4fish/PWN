@@ -1,0 +1,247 @@
+一、应用层安全防护
+
+
+1. ASLR
+
+
+ASLR(Address space layout randomization，地址空间布局随机化)通过随机放置数据区域的地址空间来防止攻击者跳转到内存的特定位置。
+
+在windows上ASLR主要包括堆栈随机化、PEB与TEB随机化、映像随机化，windows系统上虽然xp时代就提出来了，但是从vista开始ASLR才真正发挥作用。
+
+
+在linux上ASLR主要包括栈地址随机化、LIBS/MMAP随机化、EXEC随机化、BRK随机化、VDSO随机化。
+
+在没有ASLR的情况下让程序跳转到一个已经存在的系统函数的漏洞利用方式被称为ret2libc。
+
+
+1.1 栈地址随机化：2.6.15内核开始支持。
+
+
+1.2 LIBS/MMAP随机化：程序每次执行动态库都被加载到不同的内存位置。2.6.15内核开始支持。
+
+
+1.3 EXEC随机化：程序每次执行都将加载到不同的内存位置。2.6.25内核开始支持(会在第二点Built as PIE中详细讨论)。
+
+
+可以这么理解，LIBS/MMAP随机化相当于windows中dll的随机化，而EXEC随机化相当于windows中exe的随机化。
+
+
+1.4 BRK随机化：linux系统中brk和mmap这两个系统调用用来分配内存。
+
+当brk ASLR关闭的时候，start_brk和brk都是指向bss段的尾部的；当brk ASLR开启的时候，start_brk和brk初始位置是bss段的尾部加一个随机的偏移。
+
+2.6.26内核开始支持。
+
+
+
+
+1.5 VDSO随机化：VDSO(Virtual Dynamically-linked Shared Object，虚拟动态共享库)将内核态的调用映射到用户态的地址空间中，使得调用开销更小，路径更好。
+
+
+拿x86下的系统调用举例，传统的int 0x80有点慢，Intel和AMD分别实现了sysenter/sysexit和syscall/sysret，
+
+即所谓的快速系统调用指令，使用它们更快，但是也带来了兼容性的问题。
+
+
+于是linux实现了vsyscall，程序统一调用vsyscall，具体的选择由内核来决定，vsyscall的实现就在VDSO中。
+
+执行ldd /bin/sh，会发现有个linux-vdso.so.1的动态文件，而系统中却找不到它，它就是VDSO。
+
+linux内核从2.6.18(x86/PPC)和2.6.22(x86_64)开始支持VDSO的随机化。
+
+
+
+
+1.6 linux中ASLR的等级
+
+
+在linux系统中ASLR被分为0，1，2三个等级，可以通过 sudo bash -c "echo 2 > /proc/sys/kernel/randomize_va_space" 设置。
+
+
+    0）没有随机化。即关闭ASLR。
+
+
+    1）保留的随机化。共享库、栈、mmap()分配的内存空间以及VDSO将被随机化。
+
+
+    2）完全的随机化。在1的基础上，通过 brk()分配的内存空间也将被随机化。
+
+
+2. NX
+
+
+NX(Non-Executable Memory，不可执行内存)类似于 windows 中的 DEP(Data Execution Prevention，数据执行保护)。
+
+Windows系统从xp sp2开始启用DEP。
+
+
+使用gcc在汇编时 --noexecstack 或在链接时 -z noexecstack 
+
+或者使用execstack修改ELF文件中 PT_GNU_STACK中的p_flags 可以设置程序是否需要具有可执行权限的堆栈。
+
+cat /proc/cpuinfo 在 flags 中如果有NX表示CPU支持NX。
+
+
+一些BIOS厂商可能默认会禁止这个功能，不过从Ubuntu 11.04开始内核就会忽略BIOS中关于NX的设置。下面这张图是在Ubuntu中NX的启用情况。
+
+
+
+
+
+二、编译器安全防护
+
+
+1. Built as PIE
+
+
+前面说了EXEC的随机化，实际上更准确的说法是 PIE(Position Independent Executables，位置无关可执行文件)。
+
+PIE只有在系统开启ASLR和编译时开启-fpie -pie选项这两个条件同时满足时才会生效。
+
+
+最初因为在像x86这样通用寄存器较少的架构上PIE的性能损失比较明显，所以并不是所有的程序都启用了PIE。
+
+从Ubuntu 17.10和Fedora 23开始为所有的架构都启用了PIE。
+
+2. Built with RELRO
+
+
+RELRO(RELocation Read-Only，只读重定位)让加载器将重定位表中加载时解析的符号标记为只读，这减少了GOT覆写攻击的面积。
+
+
+RELRO可以分为Partial RELRO(部分RELRO)和 Full RELRO (完整RELRO)。开启 Partial RELRO的话GOT表是可写的；开启 FULL RELRO 的话GOT表是只读的。
+
+
+从Fedora 23开始所有软件包都已启用了Full RELRO。开启-Wl,-z,relro选项即可开启Partial RELRO；开启-Wl,-z,relro,-z,now选项即可开启Full RELRO。
+
+
+3. Stack Protector
+
+
+Stack Protector又名canary，stack cookie……等等，类似于VS编译器中的GS。
+
+gcc4.2中添加了 -fstack-protector 和 -fstack-protector-all 编译参数以支持该功能，gcc4.9中添加了 -fstack-protector-strong 编译参数让保护的范围更广。
+
+
+
+
+
+三、内核安全防护
+
+
+1.某些发行版中特有的
+
+
+1）dmesg restrictions
+
+
+在dmesg里可以查看到开机信息。若研究内核代码，在代码中插入printk函数，然后通过dmesg观察是一个很好的方法。
+
+从Ubuntu 12.04 LTS开始，可以将 /proc/sys/kernel/dmesg_restrict 设置为1将dmesg输出的信息当做敏感信息(默认为0)。
+
+
+
+
+2）Kernel Address Display Restriction
+
+
+在linux内核漏洞利用中常常使用commit_creds和 prepare_kernel_cred 来完成提权，它们的地址可以从 /proc/kallsyms 中读取。
+
+从Ubuntu 11.04和RHEL 7开始，/proc/sys/kernel/kptr_restrict 被默认设置为1以阻止通过这种方式泄露内核地址。
+
+
+
+
+2.所有发行版中都有的
+
+
+1）KPTI
+
+
+今年年初的CPU漏洞让 KPTI(Kernel PageTable Isolation，内核页表隔离)进入了人们的视野。
+
+进程地址空间被分成了内核地址空间和用户地址空间，其中内核地址空间映射到了整个物理地址空间，而用户地址空间只能映射到指定的物理地址空间。
+
+
+内核地址空间和用户地址空间共用一个页全局目录表。为了彻底防止用户程序获取内核数据，可以令内核地址空间和用户地址空间使用两组页表集。
+
+linux内核从4.15开始支持KPTI，windows上把这个叫KVA Shadow，原理类似。更多细节请见参考资料。
+
+
+2）KASLR
+
+
+KASLR中的K指kernel，也就是内核地址空间布局随机化。可以在内核命令行中加入nokaslr关闭KASLR。
+
+
+下面这张图就是几大主流操作系统(windows/linux/ios/os x/android)中ASLR和KASLR的启用情况。
+
+不过值得注意的是Android 8.0中为4.4及以后的内核引入了KASLR。
+
+
+
+3）SMAP/SMEP
+
+
+SMAP(Supervisor Mode Access Prevention，管理模式访问保护)
+
+和SMEP(Supervisor Mode Execution Prevention，管理模式执行保护)的作用分别是禁止内核访问用户空间的数据和禁止内核执行用户空间的代码。
+
+arm里面叫 PXN(Privilege Execute Never) 和 PAN(Privileged Access Never)。
+
+
+SMEP类似于前面说的NX，不过一个是在内核态中，一个是在用户态中。
+
+和NX一样SMAP/SMEP需要处理器支持，可以通过cat /proc/cpuinfo查看，在内核命令行中添加nosmap和nosmep禁用。
+
+
+windows系统从win8开始启用SMEP，windows内核枚举哪些处理器的特性可用，
+
+当它看到处理器支持SMEP时通过在CR4寄存器中设置适当的位来表示应该强制执行SMEP，可以通过ROP或者jmp到一个RWX的内核地址绕过。
+
+linux内核从3.0开始支持SMEP，3.7开始支持SMAP。
+
+
+在没有SMAP/SMEP的情况下把内核指针重定向到用户空间的漏洞利用方式被称为ret2usr。
+
+physmap是内核管理的一块非常大的连续的虚拟内存空间，为了提高效率，该空间地址和RAM地址直接映射。
+
+
+RAM相对physmap要小得多，导致了任何一个RAM地址都可以在physmap中找到其对应的虚拟内存地址。
+
+另一方面，我们知道用户空间的虚拟内存也会映射到RAM。
+
+
+这就存在两个虚拟内存地址(一个在physmap地址，一个在用户空间地址)映射到同一个RAM地址的情况。
+
+也就是说，我们在用户空间里创建的数据，代码很有可能映射到physmap空间。
+
+
+基于这个理论在用户空间用mmap()把提权代码映射到内存，然后再在physmap里找到其对应的副本，修改EIP跳到副本执行就可以了。
+
+因为physmap本身就是在内核空间里，所以SMAP/SMEP都不会发挥作用。这种漏洞利用方式叫ret2dir。
+
+
+4）Stack Protector
+
+
+当然在内核中也是有这种防护的，编译内核时设置CONFIG_CC_STACKPROTECTOR 选项即可，该补丁是Tejun Heo在09年给主线kernel提交的。
+
+
+    2.6.24：首次出现该编译选项并实现了x64平台的进程上下文栈保护支持
+
+    2.6.30：新增对内核中断上下文的栈保护和对x32平台进程上下文栈保护支持
+
+    3.14：对该功能进行了一次升级以支持gcc的 -fstack-protector-strong 参数，提供更大范围的栈保护
+
+
+5）address protection
+
+
+由于内核空间和用户空间共享虚拟内存地址，因此需要防止用户空间mmap的内存从0开始，从而缓解NULL解引用攻击。windows系统从win8开始禁止在零页分配内存。
+
+
+从linux内核2.6.22开始可以使用sysctl设置mmap_min_addr 来实现这一保护。从Ubuntu  9.04开始，mmap_min_addr设置被内置到内核中(x86为64k，ARM为32k)。
+
+
+
