@@ -3,7 +3,11 @@
 
 输入的字符串超出数组的极限，且其中没有 '0x00' 字符，则可以造成栈溢出
 
-方法：
+修改返回地址，让其指向m内存中已有的某个函数
 
+方法：
+存储的代码和栈桢存储子函数类似，先参数 '/bin/sh'，然后返回地址 padding2，再是调用函数地址，最后是精准覆盖返回地址的nop
+
+payload:padding1 + address of  system() + padding2 + address of '/bin/sh'
 
 注释：
