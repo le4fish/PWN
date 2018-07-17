@@ -6,7 +6,7 @@
 修改返回地址，让其指向m内存中已有的某个函数
 
 方法：
-存储的代码和栈桢存储子函数类似，先参数 '/bin/sh'，然后返回地址 padding2，再是调用函数地址，最后是精准覆盖返回地址的nop
+存储的代码和栈桢存储子函数类似，先参数 '/bin/sh'，然后返回地址 padding2，再是调用函数地址精准覆盖返回地址，最后精准覆盖基地址（也可以没有）
 
 payload:padding1 + address of  system() + padding2 + address of '/bin/sh'
 
