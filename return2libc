@@ -11,3 +11,4 @@
 payload:padding1 + address of  system() + padding2 + address of '/bin/sh'
 
 注释：
+为了攻破栈空间不可执行，我们返回程序中原有函数来执行，pwn题中，最常用的就是系统函数的返回。
