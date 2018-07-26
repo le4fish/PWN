@@ -1,0 +1,21 @@
+用途：
+栈从高往低存储，从低到高执行
+
+输入的字符串超出数组的极限，（特定函数需要其中没有 '0x00' 字符），则可以造成栈溢出
+
+修改返回地址，让其指向溢出数据中一段指令
+
+方法：
+
+payload：padding1 (任意字符)+ address of shellcode + padding2（指向代码的地址） + shellcode
+
+注释：
+如果程序里具有system，system里有/bin/sh,则可以ret2text，直接返回/sh的地址
+
+shellcode尽量写入bss段，或者精确计算返回地址位置，写入其后。
+
+第三部分的nop指令是因为各种原因，返回的地址未必正好是代码头,使用nop sled方法来滑至shellcode
+
+padding2 + shellcode 可以放在padding1中，只要空间够用，返回地址可以设置
+
+可能溢出的空间不够，产生的shellcode不够写或者自身冲突，所以可以返回到其他地方来写shellcode
