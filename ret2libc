@@ -1,0 +1,25 @@
+用途：
+栈从高往低存储，从低到高执行，为了绕过NX保护
+
+输入的字符串超出数组的极限，(若像scanf函数，则其中没有 '\x00' 字符）则可以造成栈溢出
+
+方法：
+基本格式：
+
+payload:padding1（任意字符一直覆盖完基地址bp） + address of  system() + padding2（恰好覆盖返回地址） + address of '/bin/sh'
+
+注释：
+一般pie没开时，程序总基地址固定在同一地址，非堆、栈段不受aslr影响。
+
+用 objdump -R 程序 来查看动态库函数在plt表的位置（非动态库没有），没有pie时可以寻找到system地址。objdump -r -d 程序 可以查看所有函数和其反汇编。
+
+进入gdb，用vmmap来查看所有段的q始终和权限，用search来寻找/bin/sh
+
+类似于ret2syscall，程序不提供system，需要rop链来组成完整指令。
+
+ROPgadget --binary 程序 --string '/bin/sh'
+ROPgadget --binary 程序  --only 'int'
+ROPgadget --binary 程序  --only 'pop|ret' | grep '寄存器'
+
+注意偏移地址固定，但绝对地址可能变化，开pie时需要泄露某地址来算出。
+
