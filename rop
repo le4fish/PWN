@@ -6,3 +6,8 @@
 代码段和数据段分段存储，使用rop技术跳转后，栈桢默认由返回地址，1、2、3参数写payload
 
 64位默认只有返回地址写入栈桢，且没有bp寄存器当栈底指针
+
+write（1，address，length），栈先存入返回地址
+
+read（0，address，length），栈先存入返回地址
+puts（address），不限长度，但有截断问题
