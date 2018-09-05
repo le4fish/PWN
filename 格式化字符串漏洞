@@ -28,3 +28,6 @@ h  对于整数类型，printf期待一个从short提升的int尺寸的整数型
 
 
 pwntools中有 fmtstr_payload(偏移值，{偏移的地址值:想要修改成的内容}）
+
+
+scanf函数中，可以输入 ./ 来strlen函数判断了他的长度，但fopen时不读入。
