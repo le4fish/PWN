@@ -1,0 +1,21 @@
+linux下的堆分配机制，glibc 由 ptmalloc 机制来管理。
+
+fastbin主要管理总大小在0x20-0x80字节的堆。在fastbin下会发生，use after free漏洞、double free漏洞。
+
+值得注意的是，其中0x10个字节分别给 prev_size 和 size 各0x8个字节。free时多出 fd 和 bk 两个指针。
+
+prev_size里是上一个分配堆的辅助存储空间，要注意 辅助空间不算在上个堆空间里size的大小，只有上一个堆被free，prev_size里存上一个堆空间大小
+
+size里存储本堆的大小，由于空间一定大于4个字节，最后三个bit位变成标志位，从小到大分别是p，m，n：是为1
+
+PREV_INUSE(P): 表示前一个chunk是否为allocated。
+
+IS_MMAPPED(M)：表示当前chunk是否是通过mmap系统调用产生的。
+
+NON_MAIN_ARENA(N)：表示当前chunk是否是thread arena。
+
+
+fastbin是唯一 一个单链表的bin，后删除的置于链尾，fd指向前一个prev_size地址，且fastbin不会合并。
+
+uaf
+
