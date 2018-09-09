@@ -17,5 +17,25 @@ NON_MAIN_ARENA(N)：表示当前chunk是否是thread arena。
 
 fastbin是唯一 一个单链表的bin，后删除的置于链尾，fd指向前一个prev_size地址，且fastbin不会合并。
 
-uaf
+当堆进入fastbin后，malloc同等大小时，先从fastbin中获取。
+
+
+ua f是堆中有指针时可以考虑，在堆被free后，指针没有被置零，重新malloc时，可以修改里面的地址值来达到自己的目的。
+
+例如：malloc(0x8,xx);malloc(0x8,xx);free(0);free(1);malloc(0x8,xx);show(0)
+
+
+double free 是堆被free进入fastbin后，函数没有检测是否已被free，而系统本身只会检查在链尾的元素是否被二次free
+
+例如：malloc(0x8,xx);malloc(0x8,xx);free(0);free(1);free（0）
+
+因为fastbin中堆的fd指向前一个堆，所以0，1 已经变成循坏链表。之后再重新申请，把fd修改成可控地址（fd为首0x8个字节），
+
+要注意 可控地址的第二个0x8字节中的值需要和malloc其时的大小一致，才可以伪造堆地址，但不检查指针地址是否对齐。
+
+例如：可以转移到__malloc_hook-0x13的地址，它的伪造大小为7f，可以malloc 0x60 或者 0x68.它在破坏性free时可以触发。
+
+并且one_gadget得出的地址有限制，可能只有破坏性free时可以触发。
+
+
 
