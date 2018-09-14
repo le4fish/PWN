@@ -20,7 +20,7 @@ fastbin是唯一 一个单链表的bin，后删除的置于链尾，fd指向前�
 当堆进入fastbin后，malloc同等大小时，先从fastbin中获取。
 
 
-ua f是堆中有指针时可以考虑，在堆被free后，指针没有被置零，重新malloc时，可以修改里面的地址值来达到自己的目的。
+uaf 是堆中有指针时可以考虑，在堆被free后，指向chunk指针没有被置零，重新malloc时，可以修改里面的地址值来达到自己的目的。
 
 例如：malloc(0x8,xx);malloc(0x8,xx);free(0);free(1);malloc(0x8,xx);show(0)
 
@@ -33,9 +33,12 @@ double free 是堆被free进入fastbin后，函数没有检测是否已被free�
 
 要注意 可控地址的第二个0x8字节中的值需要和malloc其时的大小一致（末尾字节不需要），才可以伪造堆地址，但不检查指针地址是否对齐。
 
-例如：可以转移到__malloc_hook-0x13的地址，它的伪造大小为7f，可以malloc 0x60 或者 0x68.它在破坏性free时可以触发。
+例如：可以转移到__malloc_hook-0x13的地址，它的伪造大小为7f，可以malloc 0x60 或者 0x68.它在破坏性free（double free top）时可以触发。
 
-并且one_gadget得出的地址有限制，可能只有破坏性free时可以触发。（困惑）
+并且one_gadget得出的地址有限制，它由execve('/bin/sh', （限制条件）, environ)组成
+
+glibc在程序发生简单错误，如double free、off by one 会调用malloc_check，就调用了malloc_hook钩子
+（可能只有破坏性free时可以触发。（困惑）
 
 
 
