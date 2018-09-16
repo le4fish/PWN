@@ -4,6 +4,8 @@ fastbin主要管理总大小在0x20-0x80字节的堆。在fastbin下会发生，
 
 值得注意的是，其中0x10个字节分别给 prev_size 和 size 各0x8个字节。free时多出 fd 和 bk 两个指针。
 
+（在32位时，指针空间减少一半，各自为0x4字节，其他原理不变，但计算注意）
+
 prev_size里是上一个分配堆的辅助存储空间，要注意 辅助空间不算在上个堆空间里size的大小，只有上一个堆被free，prev_size里存上一个堆空间大小
 
 size里存储本堆的大小，由于空间一定大于4个字节，最后三个bit位变成标志位，从小到大分别是p，m，n：是为1
@@ -15,10 +17,13 @@ IS_MMAPPED(M)：表示当前chunk是否是通过mmap系统调用产生的。
 NON_MAIN_ARENA(N)：表示当前chunk是否是thread arena。
 
 
+
 fastbin是唯一 一个单链表的bin，后删除的置于链尾，fd指向前一个prev_size地址，且fastbin不会合并。
 
 当堆进入fastbin后，malloc同等大小时，先从fastbin中获取。
 
+
+漏洞：
 
 uaf 是堆中有指针时可以考虑，在堆被free后，指向chunk指针没有被置零，重新malloc时，可以修改里面的地址值来达到自己的目的。
 
@@ -37,8 +42,8 @@ double free 是堆被free进入fastbin后，函数没有检测是否已被free�
 
 并且one_gadget得出的地址有限制，它由execve('/bin/sh', （限制条件）, environ)组成
 
-glibc在程序发生简单错误，如double free、off by one 会调用malloc_check，就调用了malloc_hook钩子
-（可能只有破坏性free时可以触发。（困惑）
+glibc在程序发生简单错误，如double free、off by one 会调用malloc_check，就调用了malloc_hook钩子。
+
 
 
 
