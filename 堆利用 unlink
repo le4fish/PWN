@@ -1,1 +1,39 @@
+若是申请的chunk大于0x80，在堆块被free后，就由 unsorted bin 来负责回收处理。
+
+unsorted bin是双向链表，且在连续地址的意思上，接邻前后有free时，可以向前合并（靠近top chunk）或者向后合并
+
+检查上一个chunk是否被free时，并不是看本chunk的pre_size地址，而是只看本chunk的size地址最后一bit是否为0
+
+只有一个chunk被free时（申请多个chunk（不一定都unsorted）的基础上），它的fd和bk都指向libc中，的malloc_hook的函数内，可以泄露libc的地址
+
+多chunk被free放入unsorted bin时，fd存放前一个释放的chunk的pre，bk存放后一个释放的chunk的pre，可以用此来泄露heap的地址
+
+
+漏洞：unlink
+
+常和double free联用，需要chunk被free后指向chunk的指针不被置于NULL，且有可以修改chunk的功能
+
+最终目的在于使一个指向chunk的指针可以被任意使用（此指针指向内容，不是chunk头）
+
+首先申请几个chunk，再逐次释放，但指针还保留着
+
+然后伪造chunk，一般伪造三个chunk，第一个伪造成free chunk，第二个伪造成allocated chunk，第三个用来证明第二个是allocated的。
+
+unlink现在增加了两种验证，p == p->fd->bk || p == p->bk->fd   和    size(p) == pre_size(p next chunk） （size里包含头两地址的大小）
+
+所以，伪造时，第一个chunk的fd为 chunk指针的地址-0x18，bk为 chunk指针的地址-0x10，
+
+合并时，先 p->fd->bk=p->bk， 再p->bk->fd=p->fd ，原本是把p从sorted bin里脱出，但现在会把chunk的指针指向 自身-0x18的地址，修改时k就可以任意覆盖
+
+因为第二个伪造chunk后，再free时，先检查size的最后一bit是0，然后根据pre_size来找到需要unlink的chunk头，再进行chunk大小的检查
+
+所以，第一个伪造chunk的size可以和第二个的pre_size一样，也可以在其中再伪造一堆块，系统不会再检查中间冒出的chunk
+
+第三块伪造chunk的pre_size为 0，size的最后一位bit是为 0
+
+最后，可以重新使用已被free的chunk的指针，把free_got的地址覆盖指针地址，再把__libc_system的地址填入free_got里
+
+把 /bin/sh 填入一个chunk，free它就可以执行系统调用了
+
+实际运用时，还要考虑到程序在各个函数运行时，是否还有其自身的限制。
 
