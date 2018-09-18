@@ -45,5 +45,16 @@ double free 是堆被free进入fastbin后，函数没有检测是否已被free�
 glibc在程序发生简单错误，如double free、off by one 会调用malloc_check，就调用了malloc_hook钩子。
 
 
+house of spirit  思路是首先 free 你要任意分配的地址，然后这个地址就会在再次分配的时候被分配到，大小处于fastbin范围
+
+前提 ：free的参数可控（可以通过栈溢出、堆溢出来覆盖），可以指向欲分配的地址。 欲分配的地址要求内容可控，可以提前构造伪chunk。
+
+在欲分配的地址上构造伪chunk。由于堆的检验机制，要求构造连续的两个伪chunk。比如 0， size+1， 空间， 0， size+1
+
+再次分配就可以在指定地点分配chunk了，就可以通过 edit 等功能来提shell
+（待续）
+
+
+
 
 
