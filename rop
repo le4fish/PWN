@@ -65,3 +65,52 @@ readelf -s 链接库 | grep '函数'
 有时system（）函数的参数可以是/bin/sh，也可以是sh，如果输入无法和后面隔开，加上 ; 
 
 有时程序有可以直接调用shell的函数，如果返回地址指向函数头没用，就指向p参数输入的那一行
+
+
+rop 的gadget有时可能程序中没有，那就去 __libc_csu_init() 函数中找
+
+我们可以看到利用其中某处的代码我们可以控制rbx,rbp,r12,r13,r14和r15的值，
+
+随后利用另一处的代码我们将r15的值赋值给rdx, r14的值赋值给rsi,r13的值赋值给edi，随后就会调用call qword ptr [r12+rbx*8]（诸如此类）
+
+执行完call qword ptr [r12+rbx*8]之后，程序会对rbx+=1，然后对比rbp和rbx的值，如果相等就会继续向下执行并ret到我们想要继续执行的地址
+
+所以 rbp 和 rbx 值也要提前设置好，还有后面也要注意多余的出栈请求。
+
+例子：
+00000000004005a0 <__libc_csu_init>:
+  4005a0:   48 89 6c 24 d8          mov    %rbp,-0x28(%rsp)
+  4005a5:   4c 89 64 24 e0          mov    %r12,-0x20(%rsp)
+  4005aa:   48 8d 2d 73 08 20 00    lea    0x200873(%rip),%rbp        # 600e24 <__init_array_end>
+  4005b1:   4c 8d 25 6c 08 20 00    lea    0x20086c(%rip),%r12        # 600e24 <__init_array_end>
+  4005b8:   4c 89 6c 24 e8          mov    %r13,-0x18(%rsp)
+  4005bd:   4c 89 74 24 f0          mov    %r14,-0x10(%rsp)
+  4005c2:   4c 89 7c 24 f8          mov    %r15,-0x8(%rsp)
+  4005c7:   48 89 5c 24 d0          mov    %rbx,-0x30(%rsp)
+  4005cc:   48 83 ec 38             sub    $0x38,%rsp
+  4005d0:   4c 29 e5                sub    %r12,%rbp
+  4005d3:   41 89 fd                mov    %edi,%r13d
+  4005d6:   49 89 f6                mov    %rsi,%r14
+  4005d9:   48 c1 fd 03             sar    $0x3,%rbp
+  4005dd:   49 89 d7                mov    %rdx,%r15
+  4005e0:   e8 1b fe ff ff          callq  400400 <_init>
+  4005e5:   48 85 ed                test   %rbp,%rbp
+  4005e8:   74 1c                   je     400606 <__libc_csu_init+0x66>
+  4005ea:   31 db                   xor    %ebx,%ebx
+  4005ec:   0f 1f 40 00             nopl   0x0(%rax)
+  4005f0:   4c 89 fa                mov    %r15,%rdx
+  4005f3:   4c 89 f6                mov    %r14,%rsi
+  4005f6:   44 89 ef                mov    %r13d,%edi
+  4005f9:   41 ff 14 dc             callq  *(%r12,%rbx,8)
+  4005fd:   48 83 c3 01             add    $0x1,%rbx
+  400601:   48 39 eb                cmp    %rbp,%rbx
+  400604:   75 ea                   jne    4005f0 <__libc_csu_init+0x50>
+  400606:   48 8b 5c 24 08          mov    0x8(%rsp),%rbx
+  40060b:   48 8b 6c 24 10          mov    0x10(%rsp),%rbp
+  400610:   4c 8b 64 24 18          mov    0x18(%rsp),%r12
+  400615:   4c 8b 6c 24 20          mov    0x20(%rsp),%r13
+  40061a:   4c 8b 74 24 28          mov    0x28(%rsp),%r14
+  40061f:   4c 8b 7c 24 30          mov    0x30(%rsp),%r15
+  400624:   48 83 c4 38             add    $0x38,%rsp
+  400628:   c3                      retq   
+
