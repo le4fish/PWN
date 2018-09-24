@@ -1,0 +1,9 @@
+在ieee协议中，double类型占2字节
+
+最高1位是正负，中间11位是阶数，最后52位是数字位
+
+"%.20g" %struct.unpack("<d", p64/asm)[0]来把16进制或者汇编指令转换成double型
+
+push 0x804A12D; jmp $+3
+
+call dword ptr [0x804BFF0]
