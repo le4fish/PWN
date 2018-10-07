@@ -32,7 +32,20 @@ h  对于整数类型，printf期待一个从short提升的int尺寸的整数型
 %hhn向地址写入单字节，%hn向地址写入双字节。向每个地址输入的char可以c转换成int，此时的计数量也不会太大。
 
 
-pwntools中有 fmtstr_payload(偏移值，{偏移的地址值:想要修改成的内容}）
+pwntools中有 
+
+计算offset：
+def exec_fmt(payload):
+    p = process("a.out")
+    p.sendline(payload)
+    info = p.recv()
+    p.close()
+    return info
+
+autofmt = FmtStr(exec_fmt)
+
+%n的便易用法：
+fmtstr_payload(偏移值，{偏移的地址值:想要修改成的内容}）
 
 
 scanf函数中，可以输入 ./ 来strlen函数判断了他的长度，但fopen时不读入。
