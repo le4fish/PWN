@@ -46,7 +46,9 @@ glibc在程序发生简单错误，如double free、off by one 会调用malloc_c
 
 
 free_hook 它不同于malloc_hook，一般都为 0 ，可以修改其上内容，在free时，会先执行其上的内容。
+malloc_hook 一般chunk被freed后，都会产生，下一次malloc直接获取。
 
+释放在 unsorted 里的chunk，只要malloc <= size就可以从中申请。
 
 house of spirit  思路是首先 free 你要任意分配的地址，然后这个地址就会在再次分配的时候被分配到，大小处于fastbin范围
 
