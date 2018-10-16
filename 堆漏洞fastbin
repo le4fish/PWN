@@ -8,7 +8,7 @@ fastbin主要管理总大小在0x20-0x80字节的堆。在fastbin下会发生，
 
 prev_size里是上一个分配堆的辅助存储空间，要注意 辅助空间不算在上个堆空间里size的大小，只有上一个堆被free，prev_size里存上一个堆空间大小
 
-size里存储本堆的大小，由于空间一定大于4个字节，最后三个bit位变成标志位，从小到大分别是p，m，n：是为1
+size里存储本堆的大小，由于空间一定大于4个字节，最后三个bit位变成标志位，从小到大分别是p，m，n：是为
 
 PREV_INUSE(P): 表示前一个chunk是否为allocated。
 
@@ -40,15 +40,18 @@ double free 是堆被free进入fastbin后，函数没有检测是否已被free�
 
 例如：可以转移到__malloc_hook-0x13的地址，它的伪造大小为7f，可以malloc 0x60 或者 0x68.它在破坏性free（double free top）时可以触发。
 
-并且one_gadget得出的地址有限制，它由execve('/bin/sh', （限制条件）, environ)组成(malloc_hook基本是第三个one_gadget）
-
-glibc在程序发生简单错误，如double free、off by one 会调用malloc_check，就调用了malloc_hook钩子。
+（并且one_gadget得出的地址有限制，它由execve('/bin/sh', （限制条件）, environ)组成(malloc_hook基本是第三个one_gadget））
 
 
-free_hook 它不同于malloc_hook，一般都为 0 ，可以修改其上内容，在free时，会先执行其上的内容。
+free_hook 它一般都为 0 ，可以修改其上内容，在free时，若不为零会先执行其上的内容。
 malloc_hook 一般chunk被freed后，都会产生，下一次malloc直接获取。
 
 释放在 unsorted 里的chunk，只要malloc <= size就可以从中申请。
+
+malloc时，malloc一个size为 0 的空间， 可以泄露libc地址（free时的值完全没变）
+
+
+
 
 house of spirit  思路是首先 free 你要任意分配的地址，然后这个地址就会在再次分配的时候被分配到，大小处于fastbin范围
 
