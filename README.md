@@ -1,2 +1,2 @@
 # PWN
-according to linux
+'according to linux'
