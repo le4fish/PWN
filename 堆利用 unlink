@@ -37,3 +37,9 @@ unlink现在增加了两种验证，p == p->fd->bk || p == p->bk->fd   和    si
 
 实际运用时，还要考虑到程序在各个函数运行时，是否还有其自身的限制。
 
+
+
+
+
+修改使用了 libc.got['__free_hook'](改写 __free_hook 的 got表），变成libc.symbols['system']，
+因为直接修改free_hook只用one_gadget技术，而现在直接把函数修改，可以调用free时的参数。
