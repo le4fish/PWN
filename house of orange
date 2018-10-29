@@ -1,0 +1,13 @@
+主要点在于，是堆溢出（没有free功能或者要伪造io file vtable）
+
+利用步骤：
+
+　　创建第一个house，修改top_chunk的size
+
+　　创建第二个house，触发sysmalloc中的_int_free
+
+　　创建第三个house，泄露libc和heap的地址
+
+　　创建第四个house，触发异常
+  
+  待续
