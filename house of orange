@@ -1,6 +1,14 @@
-主要点在于，是堆溢出（没有free功能或者要伪造io file vtable）
+主要点在于，是堆（没有free、edit功能来泄露和篡改，需要伪造io vtable或fsop来提权）
 
-利用步骤：
+伪造vtable利用步骤：
+
+     若是一个chunk可以填写全部的vtable，全部写入，不然就几个chunk拼接成vtable。
+     
+     几个chunk时，因为在heap时，有头部限制，需要溢出来全覆盖。可以把heap篡改到bss段或其他可控地址上，连续输入。
+
+
+
+fsop利用步骤：
 
 　　创建第一个house，修改top_chunk的size
 
