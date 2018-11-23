@@ -1,4 +1,25 @@
-   主要点在于，没有free、edit功能来泄露和篡改，或者其他方法异常复杂时，需要伪造io vtable或fsop来提权
+FILE结构体会通过struct _IO_FILE *_chain链接成一个链表，64位程序下其偏移为0x60，链表头部用_IO_list_all指针表示。
+
+_IO_list_all指向stderr的的flag，stderr的chain指向stdout的flag，stdout的chain指向stdin的flag.
+
+stderr -- 标准错误输出设备
+stdout -- 标准输出设备
+stdin  -- 标准输入设备
+
+IO_file结构体外面还被一个IO_FILE_plus结构体包裹着，其定义如下：
+struct _IO_FILE_plus
+{
+    _IO_FILE    file;
+    IO_jump_t   *vtable;
+}
+
+其中包含了一个重要的虚表*vtable，它是 _IO_jump_t 类型的指针，保存了一些重要的函数指针，我们一般就是改这里的指针来控制程序执行流。
+   
+   
+   
+   
+   
+   利用主要点在于，没有free、edit功能来泄露和篡改，或者其他方法异常复杂时，需要伪造io vtable或fsop来提权
 
 libc2.23版本以下，vtable表可以任意修改，但之后版本不能写入，且保护愈来愈严
 
@@ -23,6 +44,20 @@ libc2.23版本以下，vtable表可以任意修改，但之后版本不能写入
      
    几个chunk时，因为在heap时，有头部限制，需要溢出来全覆盖。可以把heap篡改到bss段或其他可控地址上，连续输入。
    
-   
+ 
+ 
+使用fsop利用（利用stderr报错来修改报错路径来提shell）：
 
-使用fsop利用步骤：
+这是利用程序中的漏洞（如unsorted bin attack）来覆盖_IO_list_all(全局变量)来使链表指向一个我们能够控制的区域，从而改写虚表*vtable。
+
+通过调用 _IO_flush_all_lockp()函数来触发,，该函数会在下面三种情况下被调用：
+
+1：当 libc 执行 abort 流程时。
+
+2：当执行 exit 函数时。
+
+3：当执行流从 main 函数返回时。
+
+当 glibc 检测到内存错误时，会依次调用这样的函数路径：malloc_printerr-> libc_message-> _GI_abort-> _IO_flush_all_lockp-> _IO_OVERFLOW.
+
+步骤：
