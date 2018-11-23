@@ -1,1 +1,28 @@
+   主要点在于，没有free、edit功能来泄露和篡改，或者其他方法异常复杂时，需要伪造io vtable或fsop来提权
 
+libc2.23版本以下，vtable表可以任意修改，但之后版本不能写入，且保护愈来愈严
+
+伪造vtable利用步骤（libc2.23以上版本无法任意地址写vtable）：
+
+   1.首先要明白io 文件流使用stdin、stdout来控制输入输出，虽然libc里结构一样，但由‘0’和‘1’来区别是输入还是输出
+   
+   程序利用流程是，使用got表里内容stdin/out的指针(也可能程序自己写了一个放在bss段），指向libc里io_file
+   
+   2.在pwndbg里，使用“print stdout”查看libc里的io_file的地址，再使用“print xxx”来查看io_file的结构，记住vtable地址（也有一个io_jumpxx名字）
+   
+   3.仿制io_file的内容来写一个假的结构，在vtable处上写一个可控的地址（之后解释）
+   
+   4.使用“print io_jumpxx”来查看vtable的结构，其中_IO_sputn用来控制printf/puts函数，它位于第八个参数
+   
+   所以，vtable的可控地址的前七个瞎写，第八个写system等提shell利用的地址
+   
+   5.最后，需要把got表里stdout的地址写成假的io_file结构的首地址。
+   
+   
+   若是一个chunk可以填写全部的vtable，全部写入，不然就几个chunk拼接成vtable。
+     
+   几个chunk时，因为在heap时，有头部限制，需要溢出来全覆盖。可以把heap篡改到bss段或其他可控地址上，连续输入。
+   
+   
+
+使用fsop利用步骤：
