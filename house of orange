@@ -1,21 +1,32 @@
-主要点在于，是堆（没有free、edit功能来泄露和篡改，需要伪造io vtable或fsop来提权）
+主要点在于，是堆溢出，没有free功能来篡改，
 
-伪造vtable利用步骤：
+　　1.创建第一个house，修改top_chunk的size，破坏_int_malloc  
+  
+    因为在sysmalloc中对这个值还要做校验， top_chunk的size也不是随意更改的：
+    
+        （1）大于MINSIZE(0X10)
+        （2）小于所需的大小 + MINSIZE
+        （3）prev inuse位设置为1
+        （4）old_top + oldsize的值是页对齐的，即 (&old_top+old_size)&(0x1000-1) == 0
 
-     若是一个chunk可以填写全部的vtable，全部写入，不然就几个chunk拼接成vtable。
-     
-     几个chunk时，因为在heap时，有头部限制，需要溢出来全覆盖。可以把heap篡改到bss段或其他可控地址上，连续输入。
+
+　 2.创建第二个house，触发sysmalloc中的_int_free
+  
+   就是如果申请大小>=mp_.mmap_threshold,就会mmap。我们质只要申请不要过大，一般不会触发这个。
+   
+   触发_int_free后，top_chunk就被释放到unsortbin中了。以下将它称作old_top。之所以要这样操作，是因为程序本身的限制，让我们不能分配到想要的内存区。
+   
+   为了top_chunk放入bin的malloc是没有真正的chunk被创建
+   
+　　
+  3.创建第三个house，泄露libc和heap的地址
+   
+   本次创建house分配的堆块从unsortbin中分配，指定的大小要小于old_top，系统会将old_top切分成两块。
+  
+   如果再次分配时候如果分配大小为largebin(也就是大于512字节)的chunk的话，就是可以既泄露libc又可以泄露heap。
 
 
 
-fsop利用步骤：
-
-　　创建第一个house，修改top_chunk的size
-
-　　创建第二个house，触发sysmalloc中的_int_free
-
-　　创建第三个house，泄露libc和heap的地址
-
-　　创建第四个house，触发异常
+　　4.创建第四个house，触发异常
   
   待续
