@@ -23,9 +23,10 @@ fastbin是唯一 一个单链表的bin，后删除的置于链尾，fd指向前�
 当堆进入fastbin后，malloc同等大小时，先从fastbin中获取。
 
 
-漏洞：
 
-uaf 是堆中有指针时可以考虑，在堆被free后，指向chunk指针没有被置零，重新malloc时，可能原本的控制chunk变成了数据chunk，就可以控制指针来提shell。
+
+uaf漏洞：
+是堆中有指针时可以考虑，在堆被free后，指向chunk指针没有被置零，重新malloc时，可能原本的控制chunk变成了数据chunk，就可以控制指针来提shell。
 
 例如：malloc(0x8,xx);malloc(0x8,xx);free(0);free(1);malloc(0x8,xx);show(0)
 
@@ -35,7 +36,7 @@ uaf 是堆中有指针时可以考虑，在堆被free后，指向chunk指针没�
 
 
 
-
+house of roman漏洞：
 
 double free 是堆被free进入fastbin后，函数没有检测是否已被free，而系统本身只会检查在链尾的元素是否被二次free
 
@@ -45,28 +46,34 @@ double free 是堆被free进入fastbin后，函数没有检测是否已被free�
 
 要注意 可控地址的第二个0x8字节中的值需要和malloc其时的大小一致（末尾字节不需要），才可以伪造堆地址，但不检查指针地址是否对齐。
 
-例如：可以转移到__malloc_hook-0x13的地址，它的伪造大小为7f，可以malloc 0x60 或者 0x68.它在破坏性free（double free top）时可以触发。
+例如：可以转移到__malloc_hook-0x13的地址，它的伪造大小为7f，可以malloc 0x60 或者 0x68.
+
+然后 free 两次同一个 chunk ，触发 malloc_printerr ， getshell
 
 （并且one_gadget得出的地址有限制，它由execve('/bin/sh', （限制条件）, environ)组成(malloc_hook基本是第三个one_gadget））
 
 
-free_hook 它一般都为 0 ，可以修改其上内容，在free时，若不为零会先执行其上的内容。
-malloc_hook 一般chunk被freed后，都会产生，下一次malloc直接获取。
+利用点
+{
+1.free_hook 它一般都为 0 ，可以修改其上内容，在free时，若不为零会先执行其上的内容。
 
+2.malloc_hook 一般chunk被freed后，都会产生，下一次malloc直接获取。
 
-释放在 unsorted 里的chunk，只要malloc <= size就可以从中申请。
+3.释放在 unsorted 里的chunk，只要malloc <= size就可以从中申请。
 
-malloc时，malloc一个size为 0 的空间， 可以泄露libc地址（free时暴露的arena完全没刷新）
-
-
-
-
-
-
+4.malloc时，malloc一个size为 0 的空间， 可以泄露libc地址（free时暴露的arena完全没刷新）
+}
 
 
 
-house of spirit  思路是首先 free 你要任意分配的地址，然后这个地址就会在再次分配的时候被分配到，大小处于fastbin范围
+
+
+
+
+
+house of spirit漏洞：
+
+思路是首先 free 你要任意分配的地址，然后这个地址就会在再次分配的时候被分配到，大小处于fastbin范围
 
 前提 ：free的参数可控（可以通过栈溢出、堆溢出来覆盖），可以指向欲分配的地址。 欲分配的地址要求内容可控，可以提前构造伪chunk。
 
@@ -80,6 +87,8 @@ house of spirit  思路是首先 free 你要任意分配的地址，然后这个
 
 
 
-
+利用点
+{
 堆指针置零时，很多方法都不能用，看看有否数组反向显示的漏洞（比如：a[-1])
 当无法edit内容时，考虑是否可以覆盖之前的指针，之后调用时，来重叠穿透地址
+}
