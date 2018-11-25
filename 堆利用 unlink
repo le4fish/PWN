@@ -1,6 +1,6 @@
 若是申请的chunk大于0x80，在堆块被free后，就由 unsorted bin 来负责回收处理。
 
-unsorted bin是双向链表，且在连续地址的意思上，接邻前后有free时，可以向前合并（靠近top chunk）或者向后合并
+unsorted bin是双向链表(只要是双向链表都行），且在连续地址的意思上时，接邻前后有free时，可以向前合并（靠近top chunk）或者向后合并
 
 检查上一个chunk是否被free时，并不是看本chunk的pre_size地址，而是只看本chunk的size地址最后一bit是否为0
 
