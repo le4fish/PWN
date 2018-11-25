@@ -1,0 +1,63 @@
+了解unsorted bin 的原理：
+1.当一个较大的 chunk 被分割成两半后，如果剩下的部分大于 MINSIZE，就会被放到 unsorted bin 中。
+ 
+2.释放一个不属于 fastbin 的 chunk，并且该 chunk 不和 top chunk 紧邻时，该 chunk 会被首先放到 unsorted bin 中。
+
+3.当进行 malloc_consolidate 时，可能会把合并后的 chunk 放到 unsorted bin 中，如果不是和 top chunk 近邻的话。
+
+
+unsorted bin的使用：
+1.Unsorted Bin 在使用的过程中，采用的遍历顺序是 FIFO，即插入的时候插入到 unsorted bin 的头部，取出的时候从链表尾获取。
+
+2.在程序 malloc 时，如果在 fastbin，small bin 中找不到对应大小的 chunk，就会尝试从 Unsorted Bin 中寻找 chunk。
+
+如果取出来的 chunk 大小刚好满足，就会直接返回给用户，否则就会把这些 chunk 分别插入到对应的 bin 中。（一次mallloc，unsorted bin都要遍历）
+
+
+
+泄露地址：
+只有一个chunk被free时（申请多个chunk（不一定都unsorted）的基础上），它的fd和bk都指向libc中，的malloc_hook的函数内，可以泄露libc的地址
+
+多chunk被free放入unsorted bin时，fd存放前一个释放的chunk的pre，bk存放后一个释放的chunk的pre，可以用此来泄露heap的地址
+
+所以，使用两个大于0x80的chunk，放入unsorted bin里后，可以一起泄露heap地址和libc地址
+
+
+篡改地址：
+1.初始状态时
+unsorted bin 的 fd 和 bk 均指向 unsorted bin 本身。
+
+2.执行 free(p)
+由于释放的 chunk 大小不属于 fast bin 范围内，所以会首先放入到 unsorted bin 中。
+
+3.修改 p[1]
+经过修改之后，原来在 unsorted bin 中的 p 的 bk 指针就会指向 target addr-16 处伪造的 chunk，即 Target Value 处于伪造 chunk 的 fd 处。
+
+4.申请 本unsorted 大小的 chunk
+此时，所申请的 chunk 处于 small bin 所在的范围，其对应的 bin 中暂时没有 chunk，所以会去 unsorted bin 中找
+
+发现 unsorted bin 不空，于是把 unsorted bin 中的最后一个 chunk 拿出来。
+
+
+源码:
+    victim = unsorted_chunks(av)->bk=p
+    bck = victim->bk=p->bk = target addr-16
+    unsorted_chunks(av)->bk = bck=target addr-16
+    bck->fd = *(target addr -16+16) = unsorted_chunks(av);
+
+可以看出，在将 unsorted bin 的最后一个 chunk 拿出来的过程中，
+
+victim 的 fd 并没有发挥作用，所以即使我们修改了其为一个不合法的值也没有关系。
+
+然而，需要注意的是，unsorted bin 链表可能就此破坏，在插入 chunk 时，可能会出现问题。
+
+即修改 target 处的值为 unsorted bin 的链表头部 0x7f1c705ffb78，也就是之前输出的信息。
+
+这里我们可以看到 unsorted bin attack 确实可以修改任意地址的值，但是所修改成的值却不受我们控制，唯一可以知道的是，这个值比较大。
+
+方向：
+
+    1.我们通过修改循环的次数来使得程序可以执行多次循环。
+    
+    2.我们可以修改 heap 中的 global_max_fast 来使得更大的 chunk 可以被视为 fast bin，这样我们就可以去执行一些 fast bin attack 了。
+
