@@ -4,9 +4,6 @@ unsorted bin是双向链表(只要是双向链表都行），且在连续地址�
 
 检查上一个chunk是否被free时，并不是看本chunk的pre_size地址，而是只看本chunk的size地址最后一bit是否为0
 
-只有一个chunk被free时（申请多个chunk（不一定都unsorted）的基础上），它的fd和bk都指向libc中，的malloc_hook的函数内，可以泄露libc的地址
-
-多chunk被free放入unsorted bin时，fd存放前一个释放的chunk的pre，bk存放后一个释放的chunk的pre，可以用此来泄露heap的地址
 
 
 漏洞：unlink
@@ -15,7 +12,7 @@ unsorted bin是双向链表(只要是双向链表都行），且在连续地址�
 
 最终目的在于使一个指向chunk的指针可以被任意使用（此指针指向内容，不是chunk头）
 
-首先申请几个chunk，再逐次释放，但指针还保留着
+首先申请几个chunk，再逐次释放，但程序list里的堆指针还保留着
 
 然后伪造chunk，一般伪造三个chunk，第一个伪造成free chunk，第二个伪造成allocated chunk，第三个用来证明第二个是allocated的。
 
