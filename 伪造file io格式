@@ -62,6 +62,8 @@ libc2.23版本以下，vtable表可以任意修改，但之后版本不能任意
 当 glibc 检测到内存错误时，会依次调用这样的函数路径：malloc_printerr-> libc_message-> _GI_abort-> _IO_flush_all_lockp-> _IO_OVERFLOW.
 
 判断条件：
+_IO_flush_all_lockp函数中，遍历_IO_list_all 的几个std结构体，选出符合条件的 结构体 作为_IO_OVERFLOW的参数，执行函数
+
     1.fp->_mode <= 0
     2.fp->_IO_write_ptr > fp->_IO_write_base
        或
@@ -69,8 +71,10 @@ libc2.23版本以下，vtable表可以任意修改，但之后版本不能任意
     2.fp->_mode > 0
     3.fp->_wide_data->_IO_write_ptr > fp->_wide_data->_IO_write_base
     
-
+    （注：mode在vtable地址的-0x18的地址上）
+    
 步骤：
+    
     
 
 
@@ -91,7 +95,7 @@ libc2.23版本以下，vtable表可以任意修改，但之后版本不能任意
     
     之后可以利用（unlink attack）来覆盖 io_file结构体 的内容时，其他都按原本填写，需要篡改的是vtable的地址和判断条件
     
-    需要先泄露 libc 和 heap 的地址，flag是个随libc_address 变化的值，还有判断条件和上述fsop一致
+    需要先泄露 libc 和 heap 的地址，flag是个随libc_address 变化的值（实际发现flag可以任意填），还有判断条件和上述fsop一致
     
     vtable也是需要伪造好后，防止不知利用哪个函数，除前两个覆盖原本的 0 ，后面都填写one_gadget(可能第四个）
     
