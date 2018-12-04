@@ -16,17 +16,21 @@ unsorted bin是双向链表(只要是双向链表都行），且在连续地址�
 
 然后伪造chunk，一般伪造三个chunk，第一个伪造成free chunk，第二个伪造成allocated chunk，第三个用来证明第二个是allocated的。
 
-unlink现在增加了两种验证，p == p->fd->bk || p == p->bk->fd   和    size(p) == pre_size(p next chunk） （size里包含头两地址的大小）
+unlink现在增加了两种验证，p == p->fd->bk && p == p->bk->fd   和    size(p) == pre_size(next chunk of p） （size里包含头两地址的大小）
 
-所以，伪造时，第一个chunk的fd为 chunk指针的地址-0x18，bk为 chunk指针的地址-0x10，
+所以，伪造时，第一个chunk的fd为 chunk指针的地址-0x18，bk为 chunk指针的地址-0x10，（p是已free的第一个chunk）
 
-合并时，先 p->fd->bk=p->bk， 再p->bk->fd=p->fd ，原本是把p从sorted bin里脱出，但现在会把chunk的指针指向 自身-0x18的地址，修改时k就可以任意覆盖
+合并时，先 p->fd->bk=p->bk， 再p->bk->fd=p->fd ，
+
+原本是把p从sorted bin里脱出，但现在会把chunk的指针指向 自身-0x18的地址，修改时k就可以任意覆盖
+
 
 因为第二个伪造chunk后，再free时，先检查size的最后一bit是0，然后根据pre_size来找到需要unlink的chunk头，再进行chunk大小的检查
 
-所以，第一个伪造chunk的size可以和第二个的pre_size一样，也可以在其中再伪造一堆块，系统不会再检查中间冒出的chunk
+所以，第一个伪造chunk的size可以和第二个的pre_size一样，也可以在其中再伪造一堆块来验证size，系统不会再检查中间冒出的chunk的正确性
 
 第三块伪造chunk的pre_size为 0，size的最后一位bit是为 0
+
 
 最后，可以重新使用已被free的chunk的指针，把free_got的地址覆盖指针地址，再把__libc_system的地址填入free_got里
 
