@@ -21,7 +21,7 @@ struct _IO_FILE_plus
    
    利用主要点在于，没有free、edit功能来泄露和篡改，或者其他方法异常复杂时，需要伪造io vtable或fsop来提权
 
-libc2.23版本以下，vtable表可以任意修改，但之后版本不能写入，且保护愈来愈严
+libc2.23版本以下，vtable表可以任意修改，但之后版本不能任意地址伪造，且保护愈来愈严
 
 伪造vtable利用步骤（libc2.23以上版本无法任意地址写vtable）：
 
@@ -46,9 +46,10 @@ libc2.23版本以下，vtable表可以任意修改，但之后版本不能写入
    
  
  
+ 
 使用fsop利用（利用stderr报错来修改报错路径来提shell）：
 
-这是利用程序中的漏洞（如unsorted bin attack）来覆盖_IO_list_all(全局变量)来使链表指向一个我们能够控制的区域，从而改写虚表*vtable。
+这是利用程序中的漏洞（如unsorted bin attack，off by one）来覆盖_IO_list_all(全局变量)来使链表指向一个我们能够控制的区域，从而改写虚表*vtable。
 
 通过调用 _IO_flush_all_lockp()函数来触发,，该函数会在下面三种情况下被调用：
 
@@ -60,4 +61,38 @@ libc2.23版本以下，vtable表可以任意修改，但之后版本不能写入
 
 当 glibc 检测到内存错误时，会依次调用这样的函数路径：malloc_printerr-> libc_message-> _GI_abort-> _IO_flush_all_lockp-> _IO_OVERFLOW.
 
+判断条件：
+    1.fp->_mode <= 0
+    2.fp->_IO_write_ptr > fp->_IO_write_base
+       或
+    1._IO_vtable_offset (fp) == 0
+    2.fp->_mode > 0
+    3.fp->_wide_data->_IO_write_ptr > fp->_wide_data->_IO_write_base
+    
+
 步骤：
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+特殊情况：（使用 fopen函数 来打开文件时，文件的 io_file结构体 创建在heap上，大小为0x230）
+
+    io_list_all 的指针从 io_stderr 改向 io_file结构体头的首地址（不是所在堆的堆头），利用 p *_IO_list_all 来查看
+    
+    之后可以利用（unlink attack）来覆盖 io_file结构体 的内容时，其他都按原本填写，需要篡改的是vtable的地址和判断条件
+    
+    需要先泄露 libc 和 heap 的地址，flag是个随libc_address 变化的值，还有判断条件和上述fsop一致
+    
+    vtable也是需要伪造好后，防止不知利用哪个函数，除前两个覆盖原本的 0 ，后面都填写one_gadget(可能第四个）
+    
+    最后，也是通过 exit函数 等情况来利用
