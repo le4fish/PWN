@@ -73,25 +73,10 @@ _IO_flush_all_lockp函数中，遍历_IO_list_all 的几个std结构体，选出
     
     （注：mode在vtable地址的-0x18的地址上,均可靠print来观察位置）
     
-步骤：
-    
-    
-    
-    
-    x.这时要利用一下 unsortedbin attack，通过溢出，把一个放在 unsortedbin 的 bk指针 用 _IO_list_all-0x10 来覆盖，
-    注意 fd指针 会影响unsortedbin链表，所以也要填个有效地址。
-    
-    unsorted_chunks(av)->bk = bck;
-    bck->fd = unsorted_chunks(av);
-    
-    最后经过申请一个smallbin范围内的chunk，但unsortedbin中没有完全符合的，_IO_list_all的内容就会被修改指向arena（一般是arena+88）
 
 
-
-
-
-
-
+具体看：
+https://www.anquanke.com/post/id/168802#h3-6
 
 
 
