@@ -2,9 +2,18 @@
 
 一.要注意的是，内核空间基本都位于内存的高地址地区，和用户空间分离。并且，保护措施主要有 kaslr，smap，smep
 
+kaslr
+即kptr_ restrict指示是否限制通过/ proc和其他接口暴露内核地址。
+
+    0：默认情况下，没有任何限制。
+    1：使用％pK格式说明符打印的内核指针将被替换为0，除非用户具有CAP_ SYSLOG特权
+    2：使用％pK打印的内核指针将被替换为0而不管特权。
+
+
 SMAP(Supervisor Mode Access Prevention)和SMEP(Supervisor Mode Execution Prevention)
 作用是      禁止内核访问用户空间的数据             和禁止内核执行用户空间的代码。
 
+分别位于CR4寄存器 第21位 和 第20位
 arm里面叫 PXN(Privilege Execute Never) 和PAN(Privileged Access Never)。
 
 SMEP类似于前面说的NX，不过一个是在内核态中，一个是在用户态中。
