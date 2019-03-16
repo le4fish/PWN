@@ -47,3 +47,47 @@ kernel 管理进程，因此 kernel 也记录了进程的权限。
 
 并且在非root权限下，使用 sudo sysctl -w kernel.kptr_restrict=0 之后才能查看。
     
+
+三、ret2usr（没有smep的保护时）
+利用了用户空间进程不能访问内核空间，但是内核空间能访问用户空间这个特性来重定向内核代码或数据流指向用户空间，并在非root权限下进行提权。
+
+将损坏的代码或数据指针重定向到用户空间中
+
+1.需要找一个函数指针来覆盖。
+
+2.在这里我们通常使用 ptmx_fops->release() 这个指针来指向要重写的内核空间。
+在内核空间中，ptmx_fops作为静态变量存在，它包含一个指向/ dev / ptmx的file_operations结构的指针。 
+file_operations结构包含一个函数指针，当对文件描述符执行诸如读/写操作时，该函数指针被执行。
+
+3.在用户空间中使用mmap提权payload，分配新的凭证结构：
+
+4.在用户空间创建一个新的结构体“A”。
+
+5.用提权函数指针来覆盖这个"A"的指针。
+
+6.触发提权函数，执行iretq返回用户空间，执行system("/bin/sh")提权
+
+int __attribute__((regparm(3))) (*commit_creds)(unsigned long cred);
+unsigned long __attribute__((regparm(3))) (*prepare_kernel_cred)(unsigned long cred);
+commit_creds = 0xffffffffxxxxxxxx;//需要提前确定
+prepare_kernel_cred = 0xffffffffxxxxxxxx;//需要提前确定
+void escalate_privs() { commit_creds(prepare_kernel_cred(0)); }  //获取root权限
+
+
+四、内核rop（绕过smep）
+
+|----------------------|
+| pop rdi; ret         |<== low mem
+|----------------------|
+| NULL                 |
+|----------------------|
+| addr of              |
+| prepare_kernel_cred()|
+|----------------------|
+| mov rdi, rax; ret    |
+|----------------------|
+| addr of              |
+| commit_creds()       |<== high mem
+|----------------------|
+
+
