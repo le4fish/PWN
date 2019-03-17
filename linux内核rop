@@ -113,7 +113,13 @@ ROPgadget --binary vmlinux > ~/ropgadget
 
 这样做其实是当rXx中包含有效的内核内存地址时，就把rXx的低32位设置为新的栈指针。（rsp就从内核地址转移去用户地址）
 
-4.
+4.完整rop链
+使用iretq指令返回到用户空间，在执行iretq之前，执行swapgs指令。
+
+该指令通过用一个MSR中的值交换GS寄存器的内容，用来获取指向内核数据结构的指针，然后才能执行系统调用之类的内核空间程序。
+
+iretq的堆栈布局有五层。
+
 |----------------------|
 | pop rdi; ret         |<== low mem
 |----------------------|
@@ -146,3 +152,18 @@ ROPgadget --binary vmlinux > ~/ropgadget
 |----------------------|
 | SS                   |<== high mem
 |----------------------|
+
+5.简单绕过SMEP的方法
+使用ROP翻转CR4的第20位并禁用SMEP，然后再执行commit_creds(prepare_kernel_cred(0))获取root权限。
+
+pop rdi; ret
+0x6f0
+mov CR4, rdi; ret
+commit_creds(prepare_kernel_cred(0))
+swapgs
+iretq
+RIP
+CS
+EFLAGS
+RSP
+SS
