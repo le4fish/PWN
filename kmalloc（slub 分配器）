@@ -32,6 +32,31 @@ SLUB分配器简化kmem_cache，slab等相关的管理数据结构，摒弃了SL
 ## SLUB分配器的初始化
 
 SLUB初始化有两个重要的工作：
-第一，创建用于申请struct kmem_cache和struct kmem_cache_node的kmem_cache；
+第一，创建用于申请 struct kmem_cache 和 struct kmem_cache_node 的 kmem_cache；
 
-第二，创建用于常规kmalloc的kmem_cache。 
+第二，创建用于常规kmalloc的 kmem_cache 。 
+
+ps1.因为创建 kmem_cache 需要从 kmem_cache 的缓冲区申请，而这时候还没有创建 kmem_cache 的缓冲区。
+
+kernel 的解决办法是先用两个静态变量 boot_kmem_cache 和 boot_kmem_cache_node
+
+来保存 struct kmem_cach 和 struct kmem_cache_node 缓冲区管理数据，
+
+以两个静态变量为基础申请大小为 struct kmem_cache 和 struct kmem_cache_node 对象大小的slub缓冲区，
+
+随后再从这些缓冲区中分别申请两个 kmem_cache ，然后把 boot_kmem_cache 和 boot_kmem_cache_node 中的内容拷贝到新申请的对象中，
+
+从而完成了 struct kmem_cache 和 struct kmem_cache_node 管理结构的 bootstrap（自引导）。
+
+ps2.创建kmalloc常规缓存：
+
+原则上系统会为每个2次幂大小的内存块申请一个缓存，但是内存块过小时，会产生很多碎片浪费，所以系统为 96B 和 192B 也各自创建了一个缓存。
+
+## slub的调度
+kmem_cache 有两个“部分”，一个是“仓库”：kmem_cache_node，一个“现行”：kmem_cache_cpu。
+
+“现行”里只保留一个slab，只有在 kmem_cache_cpu 中没有空闲内存的情况下才会从 kmem_cache_node 中换出其他的 slab
+
+  物理页按照对象(object)大小组织成单向链表，对象大小时候objsize指定的。
+  
+  例如16字节的对象大小，每个object就是16字节，每个object包含指向下一个object的指针，该指针的位置是每个object的起始地址+offset。
