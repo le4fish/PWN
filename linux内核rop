@@ -2,7 +2,8 @@
 
 一.要注意的是，内核空间基本都位于内存的高地址地区，和用户空间分离。并且，保护措施主要有 kaslr，smap，smep
 
-kaslr
+1.kaslr
+
 即kptr_ restrict指示是否限制通过/ proc和其他接口暴露内核地址。
 
     0：默认情况下，没有任何限制。
@@ -10,7 +11,7 @@ kaslr
     2：使用％pK打印的内核指针将被替换为0而不管特权。
 
 
-SMAP(Supervisor Mode Access Prevention)和SMEP(Supervisor Mode Execution Prevention)
+2.SMAP(Supervisor Mode Access Prevention)和SMEP(Supervisor Mode Execution Prevention)
 作用是      禁止内核访问用户空间的数据             和禁止内核执行用户空间的代码。
 
 分别位于CR4寄存器 第21位 和 第20位
@@ -90,4 +91,58 @@ void escalate_privs() { commit_creds(prepare_kernel_cred(0)); }  //获取root权
 | commit_creds()       |<== high mem
 |----------------------|
 
+2.寻找rop链
+同用户空间的ROP一样我们还是需要找gadget，内核空间的gadget也是可以简单地从内核二进制文件中提取的。
 
+首先使用extract-vmlinux脚本来解压/boot/vmlinuz*这个压缩内核镜像。
+
+extract-vmlinux位于/usr/src/linux-headers-xx/scripts目录。
+
+用这个命令解压vmlinuz并保存到vmlinux：
+
+sudo ./extract-vmlinux /boot/vmlinuz-xx > vmlinux
+
+之后就可以用ROPgadget来获取gadget了，最好是一次性把gadget都写到一个文件中。
+
+ROPgadget --binary vmlinux > ~/ropgadget
+
+3.Stack Pivot
+在64位的系统中使用这里的xchg rXx, rsp ; ret（xchg rsp, rXx ; ret）32位的寄存器，
+
+即xchg eXx, esp; ret或xchg esp, eXx ; ret。
+
+这样做其实是当rXx中包含有效的内核内存地址时，就把rXx的低32位设置为新的栈指针。（rsp就从内核地址转移去用户地址）
+
+4.
+|----------------------|
+| pop rdi; ret         |<== low mem
+|----------------------|
+| NULL                 |
+|----------------------|
+| addr of              |
+| prepare_kernel_cred()|
+|----------------------|
+| pop rdx; ret         |
+|----------------------|
+| addr of              |
+| commit_creds()       |
+|----------------------|
+| mov rdi, rax ;       |
+| call rdx             |
+|----------------------|
+| swapgs;              |
+| pop rbp; ret         |
+|----------------------|
+| 0xdeadbeefUL         |
+| iretq;               |
+|----------------------|
+| system("/bin/sh")    |
+|----------------------|
+| CS                   |
+|----------------------|
+| EFLAGS               |
+|----------------------|
+| RSP                  |
+|----------------------|
+| SS                   |<== high mem
+|----------------------|
