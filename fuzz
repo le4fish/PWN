@@ -1,0 +1,9 @@
+Address Sanitizer原理简述
+
+1.在申请的内存地址两侧插入对应的redzone  ==> 检测Overflow
+2.延迟已被free的堆空间的重用   ==> 检测Use-after-free
+3.访问某内存时，会检查其对应的shadow memory的state。
+4.管理shadow memory，同时保证shadow空间不被使用
+
+PS：shadow memory --- 影子内存，每8个字节的内存会映射8位（1字节）的影子内存，用于表示对应内存的状态。
+当检测到某块内存对应的shadow memory为0时，说明这块内存是OK，可使用的，反之，则捕获异常。
