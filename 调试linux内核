@@ -93,5 +93,6 @@ Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以
 
 (gdb) ptype struct xxx *
 (gdb) p &((struct xxx *)0)->xxxx  （计算偏移）
+gdb) p sizeof(struct xxx)  (去除结构体指针，计算的是整体大小）
 xxx(结构体名称），xxxx（结构体中成员）
 
