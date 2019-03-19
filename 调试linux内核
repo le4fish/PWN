@@ -1,5 +1,97 @@
+一、引入
 intel CPU 将 CPU 的特权级别分为 4 个级别：Ring 0, Ring 1, Ring 2, Ring 3。
 
 Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以随便使用外层 Ring 的资源。
 
 大多数的现代操作系统只使用了 Ring 0 和 Ring 3。
+
+二、相关
+  1.指令
+    insmod: 讲指定模块加载到内核中
+    
+    rmmod: 从内核中卸载指定模块
+    
+    lsmod: 列出已经加载的模块
+
+  2.可以看出 ioctl 也是一个系统调用，用于与设备通信。
+    int ioctl(int fd, unsigned long request, ...) 
+    
+    第一个参数为打开设备 (open) 返回的 文件描述符，
+    
+    第二个参数为用户程序对设备的控制命令，
+    
+    再后边的参数则是一些补充参数，与设备有关。
+   
+   3.user space to kernel space
+
+    当发生 系统调用，产生异常，外设产生中断等事件时，会发生用户态到内核态的切换，具体的过程为：
+
+    1）通过 swapgs 切换 GS 段寄存器，将 GS 寄存器值和一个特定位置的值进行交换，目的是保存 GS 值，同时将该位置的值作为内核执行时的 GS 值使用。
+    
+    2）将当前栈顶（用户空间栈顶）记录在 CPU 独占变量区域里，将 CPU 独占区域里记录的内核栈顶放入 rsp/esp。
+
+    3）通过 push 保存各寄存器值，具体的 代码 如下:
+
+     ENTRY(entry_SYSCALL_64)
+     /* SWAPGS_UNSAFE_STACK是一个宏，x86直接定义为swapgs指令 */
+     SWAPGS_UNSAFE_STACK
+        
+     /* 保存栈值，并设置内核栈 */
+     movq %rsp, PER_CPU_VAR(rsp_scratch)
+     movq PER_CPU_VAR(cpu_current_top_of_stack), %rsp
+        
+        
+    /* 通过push保存寄存器值，形成一个pt_regs结构 */
+    /* Construct struct pt_regs on stack */
+    pushq  $__USER_DS      /* pt_regs->ss */
+    pushq  PER_CPU_VAR(rsp_scratch)  /* pt_regs->sp */
+    pushq  %r11             /* pt_regs->flags */
+    pushq  $__USER_CS      /* pt_regs->cs */
+    pushq  %rcx             /* pt_regs->ip */
+    pushq  %rax             /* pt_regs->orig_ax */
+    pushq  %rdi             /* pt_regs->di */
+    pushq  %rsi             /* pt_regs->si */
+    pushq  %rdx             /* pt_regs->dx */
+    pushq  %rcx tuichu    /* pt_regs->cx */
+    pushq  $-ENOSYS        /* pt_regs->ax */
+    pushq  %r8              /* pt_regs->r8 */
+    pushq  %r9              /* pt_regs->r9 */
+    pushq  %r10             /* pt_regs->r10 */
+    pushq  %r11             /* pt_regs->r11 */
+    sub $(6*8), %rsp      /* pt_regs->bp, bx, r12-15 not saved */
+
+    通过汇编指令判断是否为 x32_abi。
+
+    通过系统调用号，跳到全局变量 sys_call_table 相应位置继续执行系统调用。
+
+  4.kernel space to user space
+
+    退出时，流程如下：
+
+    1）通过 swapgs 恢复 GS 值
+    
+    2）通过 sysretq 或者 iretq 恢复到用户控件继续执行。如果使用 iretq 还需要给出用户空间的一些信息（CS, eflags/rflags, esp/rsp 等）
+
+
+三、关于kernel pwn
+    一般会给以下三个文件
+
+    1.boot.sh: 一个用于启动 kernel 的 shell 的脚本，多用 qemu，保护措施与 qemu 不同的启动参数有关
+    
+    2.bzImage: kernel binary
+
+    3.rootfs.cpio: 文件系统映像
+
+
+
+
+
+
+
+
+
+
+(gdb) ptype struct xxx *
+(gdb) p &((struct xxx *)0)->xxxx  （计算偏移）
+xxx(结构体名称），xxxx（结构体中成员）
+
