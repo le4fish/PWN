@@ -74,13 +74,36 @@ Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以
 
 
 三、关于kernel pwn
-    一般会给以下三个文件
+    1.一般会给以下三个文件
 
-    1.boot.sh: 一个用于启动 kernel 的 shell 的脚本，多用 qemu，保护措施与 qemu 不同的启动参数有关
+    1)boot.sh: 一个用于启动 kernel 的 shell 的脚本，多用 qemu，保护措施与 qemu 不同的启动参数有关
     
-    2.bzImage: kernel binary
+    2)bzImage: kernel binary
 
-    3.rootfs.cpio: 文件系统映像
+    3)rootfs.cpio: 文件系统映像
+    
+    2.解释一下 qemu 启动的参数：
+
+    -initrd rootfs.cpio，使用 rootfs.cpio 作为内核启动的文件系统
+    -kernel bzImage，使用 bzImage 作为 kernel 映像
+    -cpu kvm64,+smep，设置 CPU 的安全选项，这里开启了 smep
+    -m 64M，设置虚拟 RAM 为 64M，默认为 128M
+
+其他的选项可以通过 –help 查看。
+   
+    3.检查cpio文件
+       1)解压缩： cpio -idmv < rootfs.cpio 
+       2)查看其中 init 文件 其中的 驱动设备 大概率有漏洞点
+       3)将其 .ko 文件 取出 检查保护
+       
+       
+    4.远程gdb调试
+        1)启动且导入内核符号  gdb -q ./vmlinux  
+        2)连接  target remote : 1234
+        3)add-symbol-file xxx.ko 运行中地址（加载驱动文件的 符号文件）
+        4)下断点，这时gdb才可以在运行时断下来
+        
+ 
 
 
 
