@@ -1,1 +1,5 @@
+intel CPU 将 CPU 的特权级别分为 4 个级别：Ring 0, Ring 1, Ring 2, Ring 3。
 
+Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以随便使用外层 Ring 的资源。
+
+大多数的现代操作系统只使用了 Ring 0 和 Ring 3。
