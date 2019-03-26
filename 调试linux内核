@@ -106,7 +106,45 @@ Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以
  
 四、关于调试原生linux内核
     1.下载busybox最新版
-      
+        wget https://busybox.net/downloads/busybox-1.19.4.tar.bz2 # 建议改成最新的 busybox 
+        tar -jxvf busybox-1.19.4.tar.bz2
+        cd busybox-1.19.4
+        make menuconfig  
+        make install
+
+        在menuconfig时，需要编译的一些配置
+
+        设置
+
+        Busybox Settings -> Build Options -> Build Busybox as a static binary 编译成 静态文件
+
+        关闭下面两个选项
+
+        Linux System Utilities -> [] Support mounting NFS file system 网络文件系统
+        Networking Utilities -> [] inetd (Internet超级服务器)
+
+        结束，构建文件系统
+
+       编译完,、make install 后， 在 busybox 源代码的根目录下会有一个 _install 目录下会存放好编译后的文件。
+
+       然后配置一下，就是创建一些目录，然后创建 etc/init.d/rcS 作为 linux 启动脚本
+
+        cd _install
+        mkdir proc sys dev etc etc/init.d
+        vim etc/init.d/rcS
+        chmod +x etc/init.d/rcS
+
+          其中etc/init.d/rcS中的内容为：
+          
+            #!/bin/sh
+            mount -t proc none /proc
+            mount -t sysfs none /sys
+            /sbin/mdev -s
+
+          记得脚本加上 x 权限，允许脚本的执行。
+          
+          
+          
 
 
 
