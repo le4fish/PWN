@@ -104,6 +104,9 @@ Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以
         4)下断点，这时gdb才可以在运行时断下来
         
  
+四、关于调试原生linux内核
+    1.下载busybox最新版
+      
 
 
 
@@ -114,8 +117,10 @@ Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以
 
 
 
+
+计算结构体的大小----漏洞利用
 (gdb) ptype struct xxx *
 (gdb) p &((struct xxx *)0)->xxxx  （计算偏移）
-gdb) p sizeof(struct xxx)  (去除结构体指针，计算的是整体大小）
+(gdb) p sizeof(struct xxx)  (去除结构体指针，计算的是整体大小）
 xxx(结构体名称），xxxx（结构体中成员）
 
