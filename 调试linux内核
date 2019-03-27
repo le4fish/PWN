@@ -143,7 +143,37 @@ Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以
 
           记得脚本加上 x 权限，允许脚本的执行。
           
+    2.编译内核
+      去linux官网里找指定的内核版本下载
+
+      用的由于 ubuntu 16.04 来编译内核，默认的 gcc 比较新，所以编译了 4.4.x 版本，免得换 gcc（注意交叉编译时的问题）
+
+      需要提前安装好一些编译需要的库：sudo apt-get install libncurses5-dev build-essential kernel-package
+
+      下载解压完，进入内核源代码目录
+        make menuconfig
+        
+            由于我们需要使用kgdb调试内核，注意下面这几项一定要配置好：
+             KernelHacking -->
+
+              选中Compile the kernel with debug info， 
+              选中Compile the kernel with frame pointers，
+              选中KGDB:kernel debugging with remote gdb，其下的全部都选中。
+
+            Processor type and features-->
+
+              去掉Paravirtualized guest support，禁止用户半虚拟化支持
+
+            KernelHacking-->
+
+              去掉Write protect kernel read-only data structures（否则不能用软件断点）
+
+          设置好config后：
           
+             make
+             make all
+             make modules
+
           
 
 
