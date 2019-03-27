@@ -67,119 +67,21 @@ linux系统下，进程对信号的默认响应方式有5种：
 
 24            SIGXCPU      突破对cpu时间的限制  终止、core dump   152
 
-25
-	
+25            SIGXFSZ      突破对文件大小的限制  终止、core dump   153
 
-SIGXFSZ
-	
+26            SIGVTALRM    虚拟定时器超时       终止              26
 
-突破对文件大小的限制
-	
+27            SIGPROF      性能分析定时器超时    终止             27
 
-终止、core dump
-	
+28            SIGWINCH     终端窗口尺寸发生变化   忽略            无
 
-153
+29            SIGIO        io时可能产生          终止            29
 
-26
-	
+30            SIGPWR       电量行将耗尽          终止            30
 
-SIGVTALRM
-	
+31            SIGSYS	   错误的系统调用	  终止、core dump  159
 
-虚拟定时器超时
-	
-
-终止
-	
-
-26
-
-27
-	
-
-SIGPROF
-	
-
-性能分析定时器超时
-	
-
-终止
-	
-
-27
-
-28
-	
-
-SIGWINCH
-	
-
-终端窗口尺寸发生变化
-	
-
-忽略
-	
-
-无
-
-29
-	
-
-SIGIO
-	
-
-io时可能产生
-	
-
-终止
-	
-
-29
-
-30
-	
-
-SIGPWR
-	
-
-电量行将耗尽
-	
-
-终止
-	
-
-30
-
-31
-	
-
-SIGSYS
-	
-
-错误的系统调用
-	
-
-终止、core dump
-	
-
-159
-
-34~64
-	
-
-SIGRTMIN~
-
-SIGRTMAX
-	
-
-实时信号
-	
-
-终止
-	
-
-34~64
+34~64         SIGRTMIN~SIGRTMAX  实时信号       终止             34~64
 
  
 
