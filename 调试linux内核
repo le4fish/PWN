@@ -92,7 +92,11 @@ Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以
 其他的选项可以通过 –help 查看。
    
     3.检查cpio文件
-       1)解压缩： cpio -idmv < rootfs.cpio 
+       1)解压缩： 
+            mv rootfs.cpio rootfs.cpio.gz
+            gunzip ./rootfs.cpio.gz 
+            cpio -idmv < rootfs.cpio 
+       不这么干，可能有乱码
        2)查看其中 init 文件 其中的 驱动设备 大概率有漏洞点
        3)将其 .ko 文件 取出 检查保护
        
@@ -100,7 +104,7 @@ Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以
     4.远程gdb调试
         1)启动且导入内核符号  gdb -q ./vmlinux  
         2)连接  target remote : 1234
-        3)add-symbol-file xxx.ko 运行中地址（加载驱动文件的 符号文件）
+        3)add-symbol-file xxx.ko 运行文件的首地址（加载驱动文件的 符号文件）
         4)下断点，这时gdb才可以在运行时断下来
         
  
@@ -142,6 +146,16 @@ Ring0 只给 OS 使用，Ring 3 所有程序都可以使用，内层 Ring 可以
             /sbin/mdev -s
 
           记得脚本加上 x 权限，允许脚本的执行。
+          
+          最后，整合打包 ： find . | cpio -o --format=newc > rootfs.img
+          
+          qemu-system-x86_64 
+          -kernel ~/linux-4.1.1/arch/x86_64/boot/bzImage 
+          -initrd ~/linux-4.1.1/rootfs.img 
+          -append "console=ttyS0 root=/dev/ram rdinit=/sbin/init" 
+          -cpu kvm64,+smep 
+          --nographic 
+          -gdb tcp::1234
           
     2.编译内核
       去linux官网里找指定的内核版本下载
