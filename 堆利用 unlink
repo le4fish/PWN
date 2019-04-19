@@ -22,7 +22,7 @@ unlink现在增加了两种验证，p == p->fd->bk && p == p->bk->fd   和    si
 
 合并时，先 p->fd->bk=p->bk， 再p->bk->fd=p->fd ，
 
-原本是把p从sorted bin里脱出，但现在会把chunk的指针指向 自身-0x18的地址，修改时k就可以任意覆盖
+原本是把p从sorted bin里脱出，但现在会把chunk的指针指向 自身-0x18的地址，修改时就可以任意覆盖
 
 
 因为第二个伪造chunk后，再free时，先检查size的最后一bit是0，然后根据pre_size来找到需要unlink的chunk头，再进行chunk大小的检查
