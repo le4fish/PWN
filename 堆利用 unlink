@@ -22,7 +22,7 @@ unlink现在增加了两种验证，p == p->fd->bk && p == p->bk->fd   和    si
 
 合并时，先 p->fd->bk=p->bk， 再p->bk->fd=p->fd ，
 
-原本是把p从sorted bin里脱出，但现在会把chunk的指针指向 自身-0x18的地址，修改时就可以任意覆盖
+原本是把p从sorted bin里脱出，但现在会把chunk的指针指向 自身-0x18的地址，修改时就可以任意覆盖（第一个chunk可能就是bss段里管理数组的头部）
 
 
 因为第二个伪造chunk后，再free时，先检查size的最后一bit是0，然后根据pre_size来找到需要unlink的chunk头，再进行chunk大小的检查
@@ -32,7 +32,7 @@ unlink现在增加了两种验证，p == p->fd->bk && p == p->bk->fd   和    si
 第三块伪造chunk的pre_size为 0，size的最后一位bit是为 0
 
 
-最后，可以重新使用已被free的chunk的指针，把free_got的地址覆盖指针地址，再把__libc_system的地址填入free_got里
+最后，可以重新使用已被free的chunk的指针，把free_got的地址覆盖某个指针地址，再把__libc_system的地址填入free_got里
 
 把 /bin/sh 填入一个chunk，free它就可以执行系统调用了
 
