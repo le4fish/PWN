@@ -22,7 +22,7 @@ fastbin是唯一 一个单链表的bin，后删除的置于链尾，fd指向前�
 
 当堆进入fastbin后，malloc同等大小时，先从fastbin中获取。
 
-
+特殊:释放 top chunk 前非fastbin、tcache 的 chunk，会触发malloc consolidate，会使相邻 fastbin 合并。
 
 
 uaf漏洞：
