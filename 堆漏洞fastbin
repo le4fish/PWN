@@ -46,13 +46,17 @@ double free 是堆被free进入fastbin后，函数没有检测是否已被free�
 
 要注意 可控地址的第二个0x8字节中的值需要和malloc其时的大小一致（末尾字节不需要，查看4个字节），才可以伪造堆地址，但不检查指针地址是否对齐。
 
-例如：可以转移到__malloc_hook-0x13的地址，它的伪造大小为7f，可以malloc 0x60 或者 0x68.
+例如：可以转移到__malloc_hook-0x13的地址，它的伪造大小为7f，可以malloc 0x60 或者 0x68.但只能用 one_gadget 来覆盖__malloc_hook.
 
 然后 free 两次同一个 chunk ，触发 malloc_printerr ， getshell
 
 （并且one_gadget得出的地址有限制，它由execve('/bin/sh', （限制条件）, environ)组成(malloc_hook基本是第三个one_gadget））
 
+同样，可以转移到__free_hook-0x13的地址，但它地址经常是空白的，可以malloc 大量的块为 0x60 或者 0x68.
 
+之后就可以使用 free 函数来执行，值得高兴得是，它可以在 chunk 上填充 /bin/sh 来自身完整执行 system
+
+ 
 利用点
 {
 1.free_hook 它一般都为 0 ，可以修改其上内容，在free时，若不为零会先执行其上的内容。
