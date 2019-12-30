@@ -93,3 +93,40 @@ https://www.anquanke.com/post/id/168802#h3-6
     （也可以在头部flag写上'/bin/sh'后，最后地址都填__libc_system的覆盖）
     
     最后，也是通过 exit函数 等情况来利用
+    
+    
+    
+## 0x60的smallbin是如何产生的？
+
+在正常理解中，free一个小于0x80的chunk（64位）时，这个chunk会被加入fastbin。所以直接通过free是无法产生0x60的smallbin的。
+
+大致有两种方法。
+
+1.考虑如下代码
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void){
+	void *p = malloc(0x80);//创建一个大于0x80的chunk
+	malloc(0x10);//防止后面free时归入top chunk
+	free(p);//产生一个0x90的unsortedbin
+	malloc(0x20);//从0x90的unsortedbin中割去0x30，还剩一个0x60的unsortedbin
+	malloc(0x60);//malloc一个0x70的chunk，此时unsortedbin不够大，系统把此时的unsortedbin归类到smallbin下
+	return 0;
+}
+
+2.考虑如下代码
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void){
+	void *p = malloc(0x50);
+	malloc(0x10);
+	free(p);//此时p为fastbin
+	malloc(0x3f0);//0x400 (large chunk)
+	return 0;//此时p为smallbin
+}
+
+这个代码在调试时你会发现，通过malloc一个large chunk（大于0x3ff），fastbin会变成smallbin。
