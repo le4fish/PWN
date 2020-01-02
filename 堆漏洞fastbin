@@ -52,7 +52,7 @@ double free 是堆被free进入fastbin后，函数没有检测是否已被free�
 
 （并且one_gadget得出的地址有限制，它由execve('/bin/sh', （限制条件）, environ)组成(malloc_hook基本是第三个one_gadget））
 
-同样，可以转移到__free_hook-0x13的地址，但它地址经常是空白的，可以malloc 大量的块为 0x60 或者 0x68.
+同样，可以转移到__free_hook-0x13的地址，但它地址经常是空白的，在初始化std后，就会出现 0x7f 的值，然后可以 malloc 块为 0x60 或者 0x68.
 
 之后就可以使用 free 函数来执行，值得高兴得是，它可以在 chunk 上填充 /bin/sh 来自身完整执行 system
 
