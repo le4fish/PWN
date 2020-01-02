@@ -1,1 +1,5 @@
 
+https://ctf-wiki.github.io/ctf-wiki/pwn/linux/glibc-heap/implementation/tcache-zh/
+
+
+glibc2.29 tcache增加了 全组double free检查
